@@ -16,14 +16,19 @@ naive implementation [static clients] want to eventially dynamically allicate cl
 '''
 
 def sendBoard(rows):
+    # recieve ready 
     conn.recv(1024)
     conn2.recv(1024)
 
+    # send board 
     conn.send(pickle.dumps(rows))
     conn2.send(pickle.dumps(rows))
 
+     # checking if the clients are ready to move on 
     conn.recv(1024)
     conn2.recv(1024)
+
+    print('sent client board')
 
 def updateClientBoard(board):
     rows = []
@@ -40,25 +45,73 @@ def updateClientBoard(board):
     sendBoard(rows)
 
 def validateMove(board, index):
-    pass
+    if board[index] == '_':
+        return True
+    return False
 
 def loadClientMove(board, index, client):
-    if index in RANGE:
-        if validateMove(board, index):
-            pass
-    
+    valid = False
     if client == 1:
-        board[index] = 'O'
+        while not valid:
+            if index in RANGE:
+                if validateMove(board, index):
+                    conn.send(pickle.dumps('True'))
+                    board[index] = 'O'
+                    valid = True 
+                else:
+                    conn.send(pickle.dumps('False'))
+                    #print('INVALID CLIENT MOVE')
+                    pickledData = conn.recv(1024)
+                    index = pickle.loads(pickledData)
+            else:
+                conn.send(pickle.dumps('False'))
+                #print('INVALID CLIENT MOVE')
+                pickledData = conn.recv(1024)
+                index = pickle.loads(pickledData)
     else:
-        board[index] = 'X'
-
+        while not valid:
+            if index in RANGE:
+                if validateMove(board, index):
+                    conn2.send(pickle.dumps('True'))
+                    board[index] = 'X'
+                    valid = True 
+                else:
+                    conn2.send(pickle.dumps('False'))
+                    #print('INVALID CLIENT MOVE')
+                    pickledData = conn2.recv(1024)
+                    index = pickle.loads(pickledData)
+            else:
+                conn2.send(pickle.dumps('False'))
+                #print('INVALID CLIENT MOVE')
+                pickledData = conn2.recv(1024)
+                index = pickle.loads(pickledData)
+    
+    print('loadedClientMove')
     return board 
 
-def checkWon():
-    pass
 
-def checkDraw():
-    pass
+
+def checkWon(board):
+    # check for vertical winning positions
+    for offset in range(0, 6+1, 3):
+        if board[0+offset] == board[1+offset] == board[2+offset] != '_':
+            return True 
+    # check for horizonal winning positions
+    for offset in range(0, 2+1):
+        if board[0+offset] == board[3+offset] == board[6+offset] != '_':
+            return True 
+            
+    if board[0] == board[4] == board[8] != '_':
+        return True 
+    if board[2] == board[4] == board[6] != '_':
+        return True 
+    return False
+
+def checkDraw(board):
+    for i in board:
+        if i == '_':
+            return False
+    return True 
 
 # setting up connection to clients 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -78,7 +131,7 @@ with conn, conn2:
     while True:
         a = True 
         if t == 1:
-            print('client 1 waiting for prep message')
+            print('waiting for prep message from client 1')
             while a:
                 pickledData = conn.recv(1024)
                 print('recieved prep message from client 1')
@@ -88,7 +141,7 @@ with conn, conn2:
                 except Exception as e:
                     print(e)
         elif t == 2:
-            print('client 2 waiting for prep message')
+            print('waiting for prep message from client 2')
             while a:
                 pickledData = conn2.recv(1024)
                 print('recieved prep message from client 2')
@@ -112,9 +165,27 @@ with conn, conn2:
             board = loadClientMove(board, unpickledData, 1)
             conn.send(b'ready')
             conn2.send(b'ready')
+            print('sent ready checks')
             updateClientBoard(board)
 
-            conn.send(b'done')
+            # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
+            if checkWon(board):
+                conn.send(pickle.dumps(1))
+                conn2.send(pickle.dumps(3))
+                sys.exit()
+            elif checkDraw(board):
+                conn.send(pickle.dumps(2))
+                conn2.send(pickle.dumps(2))
+                sys.exit()
+            conn.send(pickle.dumps(0))
+            conn2.send(pickle.dumps(0))
+
+            # wait for conn to send back
+            conn.recv(1024)
+            conn2.recv(1024)
+            print('sent ready confimation')
+
+            conn.send(b'ready')
 
         # client 2 move 
         elif unpickledData == 0:
@@ -131,5 +202,26 @@ with conn, conn2:
             conn.send(b'ready')
             conn2.send(b'ready')
             updateClientBoard(board)
+            print('sent updated board')
+            # checking if the clients are ready to move on 
+            #conn.recv(1024)
+            #conn2.recv(1024)
 
-            conn2.send(b'done')
+            # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
+            if checkWon(board):
+                conn.send(pickle.dumps(3))
+                conn2.send(pickle.dumps(1))
+                sys.exit()
+            elif checkDraw(board):
+                conn.send(pickle.dumps(2))
+                conn2.send(pickle.dumps(2))
+                sys.exit()
+            conn.send(pickle.dumps(0))
+            conn2.send(pickle.dumps(0))
+
+
+            conn.recv(1024)
+            conn2.recv(1024)
+            print('sent ready confimation')
+
+            conn2.send(b'ready')

@@ -1,6 +1,6 @@
-import pstats
 import socket
 import pickle
+import sys
 
 HOST = '192.168.0.182'
 PORT = 6451
@@ -13,9 +13,33 @@ def displayBoard() -> None:
         print(boardRep[i])
     s.send(b'complete')
 
+    pickledData = s.recv(1024)
+    gameCondition = pickle.loads(pickledData)
+    if gameCondition == 1:
+        print('won')
+        sys.exit()
+    elif gameCondition == 2:
+        print('draw')
+        sys.exit()
+    elif gameCondition == 3:
+        print('loss')
+        sys.exit()
+
+    s.send(b'ready')
+
 def makeMove() -> None:
+    valid = False
     move = int(input('> '))
     s.send(pickle.dumps(move))
+    while not valid:
+        pickledData = s.recv(1024)
+        if pickle.loads(pickledData) == 'True':
+            print('data valid')
+            valid = True
+        elif pickle.loads(pickledData) == 'False':
+            print('Invalid Move')
+            index = int(input('> '))
+            s.send(pickle.dumps(index))
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
