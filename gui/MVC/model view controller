@@ -1,0 +1,10 @@
+MVC architecture 
+
+model <- controller <-> view 
+
+model interacts with controller
+view interacts with controller
+
+view and model do not interact 
+
+view -> user interaction take place
