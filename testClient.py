@@ -16,13 +16,13 @@ def displayBoard() -> None:
     pickledData = s.recv(1024)
     gameCondition = pickle.loads(pickledData)
     if gameCondition == 1:
-        print('won')
+        print('Won')
         sys.exit()
     elif gameCondition == 2:
-        print('draw')
+        print('Draw')
         sys.exit()
     elif gameCondition == 3:
-        print('loss')
+        print('Loss')
         sys.exit()
 
     s.send(b'ready')
@@ -34,7 +34,6 @@ def makeMove() -> None:
     while not valid:
         pickledData = s.recv(1024)
         if pickle.loads(pickledData) == 'True':
-            print('data valid')
             valid = True
         elif pickle.loads(pickledData) == 'False':
             print('Invalid Move')
@@ -44,13 +43,14 @@ def makeMove() -> None:
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    print('connected')
+    print('Connected')
+    print('Waiting for other connection ... ')
     s.send(pickle.dumps(1))
+    print('Game starting')
     while True:
         a = True 
         while a :
             pickledData = s.recv(1024)
-            print('recieved prep messgae')
             try:
                 unpickledData = pickle.loads(pickledData)
                 a = False
