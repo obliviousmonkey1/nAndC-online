@@ -2,7 +2,7 @@ import socket
 import pickle
 import sys 
 
-host = "192.168.2.197"
+host = "ADD IP"
 # Port to listen on (non-privileged ports are > 1023)
 port = 65434
 t = 0
