@@ -1,7 +1,7 @@
 import socket
 import pickle
 
-HOST = "192.168.2.197"  # The server's hostname or IP address
+HOST = "ADD IP"  # The server's hostname or IP address
 PORT = 65434  # The port used by the server
 t = 0
 turn_order = 0
