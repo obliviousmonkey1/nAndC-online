@@ -3,8 +3,8 @@ import pickle
 import sys 
 
 HOST = '192.168.0.182'
-PORT = 6454
-PORT2 = 6451
+PORT = 6453
+PORT2 = 6452
 
 RANGE = [i for i in range(9)]
 
@@ -28,7 +28,7 @@ def sendBoard(rows):
     conn.recv(1024)
     conn2.recv(1024)
 
-    print('succesfully sent clients updated representation of the board')
+    print('> Succesfully sent clients updated representation of the board')
 
 def updateClientBoard(board):
     rows = []
@@ -58,7 +58,7 @@ def loadClientMove(board, index, client):
                     conn.send(pickle.dumps('True'))
                     board[index] = 'O'
                     valid = True 
-                    print('loaded client 1 move to server board')
+                    print('> Loaded client 1 move to server')
 
                 else:
                     conn.send(pickle.dumps('False'))
@@ -77,7 +77,7 @@ def loadClientMove(board, index, client):
                     conn2.send(pickle.dumps('True'))
                     board[index] = 'X'
                     valid = True 
-                    print('loaded client 2 move to server board')
+                    print('> Loaded client 2 move to server')
                 else:
                     conn2.send(pickle.dumps('False'))
                     #print('INVALID CLIENT MOVE')
@@ -130,24 +130,25 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
 
 # when two are connected starts the game 
 with conn, conn2:
+    print('---------------------------------------')
     conn2.send(b'ready')
     while True:
         a = True 
         if t == 1:
-            print('waiting for prep message from client 1')
+            print('> Waiting for prep message from client 1')
             while a:
                 pickledData = conn.recv(1024)
-                print('recieved prep message from client 1')
+                print('> Recieved prep message from client 1')
                 try:
                     unpickledData = pickle.loads(pickledData)
                     a = False
                 except Exception as e:
                     print(e)
         elif t == 2:
-            print('waiting for prep message from client 2')
+            print('> Waiting for prep message from client 2')
             while a:
                 pickledData = conn2.recv(1024)
-                print('recieved prep message from client 2')
+                print('> Recieved prep message from client 2')
 
                 try:
                     unpickledData = pickle.loads(pickledData)
@@ -168,19 +169,19 @@ with conn, conn2:
             board = loadClientMove(board, unpickledData, 1)
             conn.send(b'ready')
             conn2.send(b'ready')
-            print('sent ready conformation')
+            print('> Sent ready conformation to clients')
             updateClientBoard(board)
 
             # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
             if checkWon(board):
                 conn.send(pickle.dumps(1))
                 conn2.send(pickle.dumps(3))
-                print('game concluded server shutting down')
+                print('> Game concluded server shutting down')
                 sys.exit()
             elif checkDraw(board):
                 conn.send(pickle.dumps(2))
                 conn2.send(pickle.dumps(2))
-                print('game concluded server shutting down')
+                print('> Game concluded server shutting down')
                 sys.exit()
             conn.send(pickle.dumps(0))
             conn2.send(pickle.dumps(0))
@@ -188,8 +189,8 @@ with conn, conn2:
             # wait for conn to send back
             conn.recv(1024)
             conn2.recv(1024)
-            print('ready conformation recieved')
-
+            print('> Recieved ready confimation from clients')
+            print('---------------------------------------')
             conn.send(b'ready')
 
         # client 2 move 
@@ -206,22 +207,19 @@ with conn, conn2:
             board = loadClientMove(board, unpickledData, 0)
             conn.send(b'ready')
             conn2.send(b'ready')
-            print('sent ready conformation')
+            print('> Sent ready conformation to clients')
             updateClientBoard(board)
-            # checking if the clients are ready to move on 
-            #conn.recv(1024)
-            #conn2.recv(1024)
 
             # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
             if checkWon(board):
                 conn.send(pickle.dumps(3))
                 conn2.send(pickle.dumps(1))
-                print('game concluded server shutting down')
+                print('> Game concluded server shutting down')
                 sys.exit()
             elif checkDraw(board):
                 conn.send(pickle.dumps(2))
                 conn2.send(pickle.dumps(2))
-                print('game concluded server shutting down')
+                print('> Game concluded server shutting down')
                 sys.exit()
             conn.send(pickle.dumps(0))
             conn2.send(pickle.dumps(0))
@@ -229,6 +227,6 @@ with conn, conn2:
 
             conn.recv(1024)
             conn2.recv(1024)
-            print('ready recieved confimation')
-
+            print('> Recieved ready confimation from clients')
+            print('---------------------------------------')
             conn2.send(b'ready')

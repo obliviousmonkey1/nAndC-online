@@ -3,12 +3,13 @@ import pickle
 import sys 
 
 HOST = '192.168.0.182'
-PORT = 6454
+PORT = 6453
 
 def displayBoard() -> None:
     s.send(b'ready')
     pickledData = s.recv(1024)
     boardRep = pickle.loads(pickledData)
+    print('\n')
     for i in range(3):
         print(boardRep[i])
     s.send(b'complete')
