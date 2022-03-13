@@ -4,7 +4,6 @@ import sys
 
 HOST = '192.168.0.182'
 PORT = 6453
-PORT2 = 6452
 
 def displayBoard() -> None:
     s.send(b'ready')
@@ -44,11 +43,10 @@ def makeMove() -> None:
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    try:
-        s.connect((HOST, PORT))
-        s.send(pickle.dumps(1))
-    except:
-        s.connect((HOST, PORT2))
+  
+    s.connect((HOST, PORT))
+    s.send(pickle.dumps(1))
+   
     print('Connected')
     print('Waiting for other connection ... ')
     print('Game starting')
