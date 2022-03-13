@@ -1,5 +1,3 @@
-# This client has to be run first then client 2 
-
 import socket
 import pickle
 import sys 
