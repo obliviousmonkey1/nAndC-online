@@ -3,7 +3,9 @@ import pickle
 import sys
 
 HOST = '192.168.0.182'
-PORT = 6452
+PORT = 6453
+PORT2 = 6452
+
 
 def displayBoard() -> None:
     s.send(b'ready')
@@ -42,7 +44,10 @@ def makeMove() -> None:
             s.send(pickle.dumps(index))
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.connect((HOST, PORT))
+    try:
+        s.connect((HOST, PORT))
+    except:
+        s.connect((HOST, PORT2))
     print('Connected')
     print('Waiting for other connection ... ')   
     s.recv(1024)
