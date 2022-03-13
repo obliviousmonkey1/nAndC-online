@@ -48,11 +48,11 @@ def makeMove() -> None:
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     try:
         s.connect((HOST, PORT))
+        s.send(pickle.dumps(1))
     except:
         s.connect((HOST, PORT2))
     print('Connected')
     print('Waiting for other connection ... ')
-    s.send(pickle.dumps(1))
     print('Game starting')
     while True:
         a = True 
