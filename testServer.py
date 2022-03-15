@@ -1,15 +1,17 @@
 import socket
 import pickle
-import sys 
+import sys
+from tkinter import E 
 
-HOST = '192.168.0.182'
-PORT = 6453
+HOST = '10.0.2.116'
+PORT = 6454
 PORT2 = 6452
 
 RANGE = [i for i in range(9)]
 
 board = ['_' for _ in range(9)]
 t = 1
+l = 0
 
 '''
 naive implementation [static clients] want to eventially dynamically allicate client 1 and client 2 
@@ -118,45 +120,60 @@ def checkDraw(board):
 # setting up connection to clients 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
+    print('> Client 1 listening')
     s.listen()
     conn, addr = s.accept()
     print(f'1 Connected by {addr}')
 
+print('client 2')
+
+# really badly written code 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
+    # really badly written code 
     s2.bind((HOST, PORT2))
+    print('> Client 2 listening')
     s2.listen()
     conn2, addr2 = s2.accept()
     print(f'2 Connected by {addr2}')
 
+            
 # when two are connected starts the game 
 with conn, conn2:
+    conn.recv(1024)
+    conn2.recv(1024)
     print('---------------------------------------')
-    conn2.send(b'ready')
     while True:
-        a = True 
-        if t == 1:
-            print('> Waiting for prep message from client 1')
-            while a:
-                pickledData = conn.recv(1024)
-                print('> Recieved prep message from client 1')
-                try:
-                    unpickledData = pickle.loads(pickledData)
-                    a = False
-                except Exception as e:
-                    print(e)
-        elif t == 2:
-            print('> Waiting for prep message from client 2')
-            while a:
-                pickledData = conn2.recv(1024)
-                print('> Recieved prep message from client 2')
+        if l != 0:
+            a = True 
+            if t == 1:
+                print('> Waiting for prep message from client 1')
+                while a:
+                    pickledData = conn.recv(1024)
+                    print('> Recieved prep message from client 1')
+                    try:
+                        unpickledData = pickle.loads(pickledData)
+                        a = False
+                    except Exception as e:
+                        print(e)
+            elif t == 2:
+                print('> Waiting for prep message from client 2')
+                while a:
+                    pickledData = conn2.recv(1024)
+                    print('> Recieved prep message from client 2')
 
-                try:
-                    unpickledData = pickle.loads(pickledData)
-                    a = False
-                except Exception as e:
-                    print(e)
+                    try:
+                        unpickledData = pickle.loads(pickledData)
+                        a = False
+                    except Exception as e:
+                        print(e)
+        else:
+            l = 1
+            unpickledData = 1
+
         # client 1 move
         if unpickledData == 1:
+            conn.recv(1024)
+            conn2.recv(1024)
             t = 1
             # tell it to switch to recieving steps
             conn2.send(pickle.dumps(0))
