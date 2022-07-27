@@ -1,9 +1,9 @@
 import socket
 import pickle
-import sys 
+import sys
 
-HOST = '192.168.0.182'
-PORT = 6453
+HOST = 'ADD IP'
+PORT = 6454
 PORT2 = 6452
 
 RANGE = [i for i in range(9)]
@@ -51,48 +51,21 @@ def validateMove(board, index):
 
 def loadClientMove(board, index, client):
     valid = False
-    if client == 1:
-        while not valid:
-            if index in RANGE:
-                if validateMove(board, index):
-                    conn.send(pickle.dumps('True'))
-                    board[index] = 'O'
-                    valid = True 
-                    print('> Loaded client 1 move to server')
-
-                else:
-                    conn.send(pickle.dumps('False'))
-                    #print('INVALID CLIENT MOVE')
-                    pickledData = conn.recv(1024)
-                    index = pickle.loads(pickledData)
-            else:
-                conn.send(pickle.dumps('False'))
-                #print('INVALID CLIENT MOVE')
-                pickledData = conn.recv(1024)
-                index = pickle.loads(pickledData)
-    else:
-        while not valid:
-            if index in RANGE:
-                if validateMove(board, index):
-                    conn2.send(pickle.dumps('True'))
-                    board[index] = 'X'
-                    valid = True 
-                    print('> Loaded client 2 move to server')
-                else:
-                    conn2.send(pickle.dumps('False'))
-                    #print('INVALID CLIENT MOVE')
-                    pickledData = conn2.recv(1024)
-                    index = pickle.loads(pickledData)
-            else:
-                conn2.send(pickle.dumps('False'))
-                #print('INVALID CLIENT MOVE')
-                pickledData = conn2.recv(1024)
-                index = pickle.loads(pickledData)
     
-    return board 
+    while not valid:
+        if index in RANGE:
+            if validateMove(board, index):
+                client.send(pickle.dumps('True'))
+                board[index] = 'O'
+                valid = True 
+                print('> Loaded client 1 move to server')
 
-
-
+        if valid == False:
+            client.send(pickle.dumps('False'))
+            #print('INVALID CLIENT MOVE')
+            pickledData = client.recv(1024)
+            index = pickle.loads(pickledData)
+   
 def checkWon(board):
     # check for vertical winning positions
     for offset in range(0, 6+1, 3):
@@ -115,24 +88,68 @@ def checkDraw(board):
             return False
     return True 
 
+def turn(clientGo, clientWait):
+    # tell it to switch to recieving steps
+    clientWait.send(pickle.dumps(0))
+    # tell client 1 to switch to sending steps
+    clientGo.send(pickle.dumps(1))
+
+    # wait to recieve data from client 1
+    pickledData = clientGo.recv(1024)
+    print('> Recieved board move')
+    unpickledData = pickle.loads(pickledData)
+    # pass conn to cut down on unnesisary code
+    loadClientMove(board, unpickledData, clientGo)
+    clientGo.send(b'ready')
+    clientWait.send(b'ready')
+    print('> Sent ready conformation to clients')
+    updateClientBoard(board)
+
+    # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
+    if checkWon(board):
+        clientGo.send(pickle.dumps(1))
+        clientWait.send(pickle.dumps(3))
+        print('> Game concluded server shutting down')
+        sys.exit()
+    elif checkDraw(board):
+        clientGo.send(pickle.dumps(2))
+        clientWait.send(pickle.dumps(2))
+        print('> Game concluded server shutting down')
+        sys.exit()
+    clientGo.send(pickle.dumps(0))
+    clientWait.send(pickle.dumps(0))
+
+    # wait for conn to send back
+    clientGo.recv(1024)
+    clientWait.recv(1024)
+    print('> Recieved ready confimation from clients')
+    print('---------------------------------------')
+    clientGo.send(b'ready')
+
 # setting up connection to clients 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
+    print('> Client 1 listening')
     s.listen()
     conn, addr = s.accept()
-    print(f'1 Connected by {addr}')
+    print(f'2 Connected by {addr}')
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
     s2.bind((HOST, PORT2))
+    print('> Client 2 listening')
     s2.listen()
     conn2, addr2 = s2.accept()
     print(f'2 Connected by {addr2}')
 
 # when two are connected starts the game 
 with conn, conn2:
+    conn.recv(1024)
+    conn2.recv(1024)
+    conn.send(b'cool')
+    conn2.send(b'cool')
     print('---------------------------------------')
-    conn2.send(b'ready')
     while True:
+        # optimize and lower footprint of this code
         a = True 
         if t == 1:
             print('> Waiting for prep message from client 1')
@@ -155,78 +172,17 @@ with conn, conn2:
                     a = False
                 except Exception as e:
                     print(e)
+
+        elif t == 3:
+            unpickledData = 1 
+
         # client 1 move
         if unpickledData == 1:
             t = 1
-            # tell it to switch to recieving steps
-            conn2.send(pickle.dumps(0))
-            # tell client 1 to switch to sending steps
-            conn.send(pickle.dumps(1))
-
-            # wait to recieve data from client 1
-            pickledData = conn.recv(1024)
-            unpickledData = pickle.loads(pickledData)
-            board = loadClientMove(board, unpickledData, 1)
-            conn.send(b'ready')
-            conn2.send(b'ready')
-            print('> Sent ready conformation to clients')
-            updateClientBoard(board)
-
-            # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
-            if checkWon(board):
-                conn.send(pickle.dumps(1))
-                conn2.send(pickle.dumps(3))
-                print('> Game concluded server shutting down')
-                sys.exit()
-            elif checkDraw(board):
-                conn.send(pickle.dumps(2))
-                conn2.send(pickle.dumps(2))
-                print('> Game concluded server shutting down')
-                sys.exit()
-            conn.send(pickle.dumps(0))
-            conn2.send(pickle.dumps(0))
-
-            # wait for conn to send back
-            conn.recv(1024)
-            conn2.recv(1024)
-            print('> Recieved ready confimation from clients')
-            print('---------------------------------------')
-            conn.send(b'ready')
+            turn(conn, conn2)
 
         # client 2 move 
         elif unpickledData == 0:
             t = 2
-            # tell it to switch to recieving steps
-            conn.send(pickle.dumps(0))
-            # tell client 1 to switch to sending steps
-            conn2.send(pickle.dumps(1))
-
-            # wait to recieve data from client 1
-            pickledData = conn2.recv(1024)
-            unpickledData = pickle.loads(pickledData)
-            board = loadClientMove(board, unpickledData, 0)
-            conn.send(b'ready')
-            conn2.send(b'ready')
-            print('> Sent ready conformation to clients')
-            updateClientBoard(board)
-
-            # check nothing/won/draw [normal:0, win:1, draw:2, loss:3]
-            if checkWon(board):
-                conn.send(pickle.dumps(3))
-                conn2.send(pickle.dumps(1))
-                print('> Game concluded server shutting down')
-                sys.exit()
-            elif checkDraw(board):
-                conn.send(pickle.dumps(2))
-                conn2.send(pickle.dumps(2))
-                print('> Game concluded server shutting down')
-                sys.exit()
-            conn.send(pickle.dumps(0))
-            conn2.send(pickle.dumps(0))
-
-
-            conn.recv(1024)
-            conn2.recv(1024)
-            print('> Recieved ready confimation from clients')
-            print('---------------------------------------')
-            conn2.send(b'ready')
+            turn(conn, conn2)
+           
