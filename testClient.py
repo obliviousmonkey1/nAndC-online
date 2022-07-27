@@ -1,9 +1,9 @@
+from cgi import print_arguments
 import socket
 import pickle
 import sys 
 
-HOST = '192.168.0.182'
-PORT = 6453
+HOST = '10.0.2.116'
 
 def displayBoard() -> None:
     s.send(b'ready')
@@ -42,34 +42,66 @@ def makeMove() -> None:
             s.send(pickle.dumps(index))
 
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-  
-    s.connect((HOST, PORT))
-    s.send(pickle.dumps(1))
+# port logic code
+class Port:
+    def __init__(self, iP:str, lowerBound=6450, upperBound=6456) -> None:
+        self._iP = iP
+        self._lowerBound = lowerBound
+        self._upperBound = upperBound
    
-    print('Connected')
-    print('Waiting for other connection ... ')
-    print('Game starting')
-    while True:
-        a = True 
-        while a :
-            pickledData = s.recv(1024)
-            try:
-                unpickledData = pickle.loads(pickledData)
-                a = False
-            except Exception as e :
-                print(e)
-        
-        if unpickledData == 1:
-            makeMove()
-            s.recv(1024)
-            displayBoard()
+    def scanForPorts(self):
+        port = 0
+        for i in range(self._lowerBound, self._upperBound):
+            check = self.isPortOpen(i)
+            if check == 0:
+                port = i
+                break
 
-            # tells the server that its client twos go 
-            s.recv(1024)
-            s.send(pickle.dumps(0))
-        elif unpickledData == 0:
+        return port 
 
-            # wait to ready a message 
-            s.recv(1024)
-            displayBoard()
+    def isPortOpen(self, port):
+        try:
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            connection = client.connect_ex((self._iP, port))
+            port_opened = connection
+            client.close
+            return port_opened
+        except socket.error as e:
+            print(e)
+
+
+if __name__ == '__main__':
+    ports = Port(HOST)
+    PORT = ports.scanForPorts()
+    print(PORT)
+    
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HOST, PORT))
+        print('Connected')
+        print('Waiting for other connection ... ')
+        print('Game starting')
+        while True:
+            a = True 
+            while a :
+                pickledData = s.recv(1024)
+                try:
+                    unpickledData = pickle.loads(pickledData)
+                    a = False
+                except Exception as e :
+                    pass
+            
+            if unpickledData == 1:
+                s.send(b'ready')
+                makeMove()
+                s.recv(1024)
+                displayBoard()
+
+                # tells the server that its client twos go 
+                s.recv(1024)
+                s.send(pickle.dumps(0))
+            elif unpickledData == 0:
+                s.send(b'ready')
+
+                # wait to ready a message 
+                s.recv(1024)
+                displayBoard()
